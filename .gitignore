@@ -129,4 +129,4 @@ dmypy.json
 .pyre/
 
 .idea/
-.training/
+training/download_lila_subset.py

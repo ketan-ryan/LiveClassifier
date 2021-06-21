@@ -1,4 +1,5 @@
 from flask import Flask, render_template, Response, request
+import subprocess
 import cv2 as cv
 import threading
 import datetime
@@ -8,7 +9,7 @@ import time
 # initialize the output frame and a lock used to ensure thread-safe
 # exchanges of the output frames (useful when multiple browsers/tabs
 # are viewing the stream)
-outputFrame = None
+output_frame = None
 lock = threading.Lock()
 
 app = Flask(__name__)
@@ -26,19 +27,20 @@ def home_page():
     return render_template('home.html')
 
 
-def get_country(ip_address):
+def get_loc():
     try:
-        response = requests.get("http://ip-api.com/json/{}".format(ip_address))
-        js = response.json()
-        string = f"{js['lat']} {js['lon']} {js['city']}, {js['regionName']}"
+        ip = requests.get('https://ipinfo.io/')
+        ip = ip.json()
+        string = f"{ip['loc']} {ip['city']}, {ip['region']}"
         return string
+
     except Exception as e:
         return str(e)
 
 
 @app.route('/live')
 def live_feed():
-    return render_template('live.html', location=get_country(request.remote_addr))
+    return render_template('live.html', location=get_loc())
 
 
 @app.route('/video_feed')
@@ -49,15 +51,12 @@ def video_feed():
 def gen_frames():
     # grab global references to the video stream, output frame, and
     # lock variables
-    global vs, outputFrame, lock
-    total_frames = 0
+    global output_frame, lock
     while True:
         success, frame = capture.read()
         if not success:
             break
         else:
-            # frame = vsutils.resize(frame, width=400)
-
             timestamp = datetime.datetime.now()
             cv.putText(frame, timestamp.strftime('%b %d %Y, %I:%M:%S %p EST'), (10, frame.shape[0] - 10),
                        cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
@@ -69,17 +68,17 @@ def gen_frames():
 
 def generate():
     # grab global references to the output frame and lock variables
-    global outputFrame, lock
+    global output_frame, lock
     # loop over frames from the output stream
     while True:
         # wait until the lock is acquired
         with lock:
             # check if the output frame is available, otherwise skip
             # the iteration of the loop
-            if outputFrame is None:
+            if output_frame is None:
                 continue
             # encode the frame in JPEG format
-            (flag, encodedImage) = cv.imencode(".jpg", outputFrame)
+            (flag, encodedImage) = cv.imencode(".jpg", output_frame)
             # ensure the frame was successfully encoded
             if not flag:
                 continue
