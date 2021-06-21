@@ -1,0 +1,12 @@
+# train and val data as 1) directory: path/images/, 2) file: path/images.txt, or 3) list: [path1/images/, path2/images/]
+train: ../coco128/images/train2017/  # 128 images
+val: ../coco128/images/train2017/  # 128 images
+
+# number of classes
+nc: 25
+
+# class names
+names: ['red_squirrel', 'common_opossum', 'bird_spec', 'white_tailed_deer, red_fox', 'bird',
+                       'eastern gray squirrel', 'eastern chipmunk', 'woodchuck', 'wild turkey', 'eastern cottontail',
+                       'human', 'vehicle', 'striped skunk', 'northern raccoon', 'horse', 'dog', 'american crow',
+                       'coyote', 'bobcat', 'american black bear', 'domestic cat', 'grey fox', 'rabbit', 'car', 'fox']
