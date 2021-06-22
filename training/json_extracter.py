@@ -1,4 +1,7 @@
+from tqdm import tqdm
 import json
+import glob
+import os
 
 # All lower-case; we'll convert category names to lower-case when comparing
 species_of_interest = ['red_squirrel', 'common_opossum', 'bird_spec', 'white_tailed_deer, red_fox', 'bird',
@@ -6,45 +9,62 @@ species_of_interest = ['red_squirrel', 'common_opossum', 'bird_spec', 'white_tai
                        'human', 'vehicle', 'striped skunk', 'northern raccoon', 'horse', 'dog', 'american crow',
                        'coyote', 'bobcat', 'american black bear', 'domestic cat', 'grey fox', 'rabbit', 'car', 'fox']
 
-with open('missouri_camera_traps_set1.json') as file:
-    missouri = json.load(file)
-
 images_of_interest = []
 list_indices = []
+annotations_of_interest = []
 
-# Load images and annotations into lists, keeping track of what class the image is
-for image in missouri['images']:
-    for species in species_of_interest:
-        if species in image['file_name'].lower() and 'Collared_Peccary' not in image['file_name']:
-            images_of_interest.append(image)
+# read_files = glob.glob(r"G:/Ketan/Downloads/lila_downloads_by_species/caltech*.json")
+# with open(r"G:/Ketan/Downloads/lila_downloads_by_species/merged_file.json", "w") as outfile:
+#     outfile.write('[{}]'.format(
+#         ','.join([open(f, "r").read() for f in read_files])))
+#
+# exit(0)
 
-# Load annotations, matching ids and if they have a bounding box associated
-annotations = []
-for a in missouri['annotations']:
-    try:
-        if any(a['image_id'] in im['id'] for im in images_of_interest) and a['bbox']:
-            annotations.append(a)
-    except KeyError:
-        pass
+with open(r'G:/Ketan/Downloads/lila_downloads_by_species/caltech_bboxes_20200316.json', 'r') as fp:
+    data = json.load(fp)
 
-# Trim list of images to those with bounding boxes
-images_of_interest = [im for im in images_of_interest if any(im['id'] == a['image_id'] for a in annotations)]
-print(len(images_of_interest), len(annotations))
+    annotations = data['annotations']
+    images = data['images']
 
-for idx, _ in enumerate(annotations):
-    if images_of_interest[idx]['id'] != annotations[idx]['image_id']:
-        images_of_interest.remove(images_of_interest[idx])
+    annotations = sorted(annotations, key=lambda a: a['image_id'])
+    images = sorted(images, key=lambda i: i['id'])
 
-# Trim list of classes
-for image in images_of_interest:
-    for idx, species in enumerate(species_of_interest):
-        if species in image['file_name'].lower() and 'Collared_Peccary' not in image['file_name']:
-            list_indices.append(idx)
-            break
+    with open('G:/Ketan/Downloads/lila_downloads_by_species/test-caltech-sorted.json', 'w') as out:
+        json.dump(annotations, out, indent=3)
+        json.dump(images, out, indent=3)
+
+for file_name in [file for file in os.listdir(r'G:/Ketan/Downloads/lila_downloads_by_species/') if
+                  file.endswith('.json')]:
+    print(file_name)
+    with open(r'G:/Ketan/Downloads/lila_downloads_by_species/' + file_name) as json_file:
+        data = json.load(json_file)
+
+        annotations = data['annotations']
+        images = data['images']
+
+        annotations = sorted(annotations, key=lambda a: a['image_id'])
+        images = sorted(images, key=lambda i: i['id'])
+
+        # print(len(images), len(annotations))
+        for idx, image in enumerate(tqdm(images)):
+            ann = annotations[idx]
+            if image['id'] == ann['image_id']:
+                try:
+                    if ann['sequence_level_annotation'] is False and ann['bbox']:
+                        for i_s, species in enumerate(species_of_interest):
+                            if species in image['file_name'].lower() and 'Collared_Peccary' not in image['file_name']:
+                                images_of_interest.append(image)
+                                annotations_of_interest.append(ann)
+                                list_indices.append(i_s)
+                except KeyError:
+                    continue
+    print(len(images_of_interest), len(list_indices), len(annotations_of_interest))
+
+print(len(images_of_interest), len(list_indices), len(annotations_of_interest))
 
 # Now we have matching lists of images, annotations, and classes: convert to YOLO format
-for idx, _ in enumerate(annotations):
-    box = annotations[idx]['bbox']
+for idx, _ in enumerate(annotations_of_interest):
+    box = annotations_of_interest[idx]['bbox']
     xmin, ymin, width, height = box[0], box[1], box[2], box[3]
     x_center = (xmin + width) / 2
     y_center = (ymin + height) / 2
