@@ -1,12 +1,17 @@
-import time
-
+from mega_handler import MegaHandler, InsufficientStorageError
 from camera import WebcamVideoStream
+from sys import exit
 import cv2 as cv
 import datetime
+import logging
+import time
 
 cap = WebcamVideoStream().start()
 frames = []
 start_time = datetime.datetime.now().second
+
+m = MegaHandler()
+logger = logging.getLogger(__name__)
 
 
 # Flushes the buffer to a video file
@@ -46,7 +51,13 @@ def gen_frame():
         if abs(current_time - start_time) > 3:
             print(len(frames))
             # if(len(frames) > xxx) Let the buffer fill before immediately flushing, useful with real condition
-            save_to_vid(frames)
+            path = save_to_vid(frames)
+            # try:
+            #     link = m.put_video(path)
+            # except InsufficientStorageError:
+            #     logger.critical(f'Insufficient storage remaining to upload {path}. Please free up space.')
+            #  ***send alert here (sms? popup? other?)***
+
             frames.clear()
             start_time = datetime.datetime.now().second
             continue
