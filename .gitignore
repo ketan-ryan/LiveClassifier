@@ -130,3 +130,5 @@ dmypy.json
 
 .idea/
 training/download_lila_subset.py
+yolov5/
+!yolov5/detect.py
